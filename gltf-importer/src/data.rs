@@ -7,14 +7,15 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use import;
 use std::ops;
 
 use futures::{Future, Poll};
 use std::boxed::Box;
 use std::sync::Arc;
 
-pub use image_crate::DynamicImage;
+use {Error, Source};
+
+pub use image::DynamicImage;
 
 /// Represents decoded image data.
 #[derive(Clone, Debug)]
@@ -46,9 +47,9 @@ enum Region {
 }
 
 /// A `Future` that drives the acquisition of glTF data.
-pub struct Async<S: import::Source> {
+pub struct Async<S: Source> {
     /// A `Future` that resolves to a `Box<[u8]>`.
-    future: Box<Future<Item = Box<[u8]>, Error = import::Error<S>>>,
+    future: Box<Future<Item = Box<[u8]>, Error = Error<S>>>,
 
     /// The subset the data that is required once available.
     region: Region,
@@ -66,11 +67,11 @@ pub struct Data {
     region: Region,
 }
 
-impl<S: import::Source> Async<S> {
+impl<S: Source> Async<S> {
     /// Constructs `AsyncData` that uses all data from the given future. 
     pub fn full(future: Box<Future<Item = Box<[u8]>, Error = S::Error>>) -> Self {
         Async {
-            future: Box::new(future.map_err(import::Error::Source)),
+            future: Box::new(future.map_err(Error::Source)),
             region: Region::Full,
         }
     }
@@ -82,7 +83,7 @@ impl<S: import::Source> Async<S> {
         len: usize,
     ) -> Self {
         Async {
-            future: Box::new(future.map_err(import::Error::Source)),
+            future: Box::new(future.map_err(Error::Source)),
             region: Region::View { offset, len },
         }
     }
@@ -98,9 +99,9 @@ impl<S: import::Source> Async<S> {
     }
 }
 
-impl<S: import::Source> Future for Async<S> {
+impl<S: Source> Future for Async<S> {
     type Item = Data;
-    type Error = import::Error<S>;
+    type Error = Error<S>;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         self.future
             .poll()

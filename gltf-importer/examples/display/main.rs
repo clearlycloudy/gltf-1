@@ -8,12 +8,13 @@
 // except according to those terms.
 
 extern crate gltf;
+extern crate gltf_importer;
+
+use gltf_importer::Import;
 
 fn main() {
     if let Some(path) = std::env::args().nth(1) {
-        let source = gltf::import::FromPath::new(&path);
-        let config = Default::default();
-        let import = gltf::Import::custom(source, config);
+        let import = Import::from_path(&path);
         match import.sync() {
             Ok(gltf) => println!("{:#?}", gltf),
             Err(err) => println!("Invalid glTF ({:?})", err),

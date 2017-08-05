@@ -7,23 +7,26 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use config;
+use data;
 use futures::{self, future};
-use import::{self, data};
-use json;
+use gltf::json;
 
+use config::Config;
 use futures::{Future, Poll};
-use image_crate::{load_from_memory, load_from_memory_with_format};
-use image_crate::ImageFormat as Format;
-use image_crate::ImageResult;
-use image_crate::ImageFormat::{JPEG as Jpeg, PNG as Png};
+use gltf::root::Root;
+use gltf::Gltf;
+use image::{load_from_memory, load_from_memory_with_format};
+use image::ImageFormat as Format;
+use image::ImageResult;
+use image::ImageFormat::{JPEG as Jpeg, PNG as Png};
 use json::validation::Validate;
-use root::Root;
 use std::boxed::Box;
 use std::io::Cursor;
 
-use {Data, DynamicImage, Gltf};
+use {Data, DynamicImage, Error, Source};
 
-enum AsyncImage<S: import::Source> {
+enum AsyncImage<S: Source> {
     /// Image data is borrowed from a buffer.
     Borrowed {
         /// The buffer index.
@@ -49,9 +52,9 @@ enum AsyncImage<S: import::Source> {
     },
 }
 
-impl<S: import::Source> Future for AsyncImage<S> {
+impl<S: Source> Future for AsyncImage<S> {
     type Item = EncodedImage;
-    type Error = import::Error<S>;
+    type Error = Error<S>;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self {
             &mut AsyncImage::Borrowed { index, offset, len, format } => {
@@ -104,7 +107,7 @@ enum EncodedImage {
     },
 }
 
-fn source_buffers<S: import::Source>(
+fn source_buffers<S: Source>(
     root: &Root,
     source: &S,
 ) -> Vec<data::Async<S>> {
@@ -118,7 +121,7 @@ fn source_buffers<S: import::Source>(
         .collect()
 }
 
-fn source_images<S: import::Source>(
+fn source_images<S: Source>(
     root: &Root,
     source: &S,
 ) -> Vec<AsyncImage<S>> {
@@ -174,25 +177,25 @@ fn decode_images(
         .collect()
 }
 
-pub fn import<S: import::Source>(
+pub fn import<S: Source>(
     data: Box<[u8]>,
     source: S,
-    config: import::Config,
-) -> Box<Future<Item = Gltf, Error = import::Error<S>>> {
+    config: Config,
+) -> Box<Future<Item = Gltf, Error = Error<S>>> {
     let task = future::lazy(move || {
         let data = data;
         match json::from_reader(Cursor::new(data)) {
             Ok(json) => future::ok(json),
-            Err(err) => future::err(import::Error::MalformedJson(err)),
+            Err(err) => future::err(Error::MalformedJson(err)),
         }
     })
         .and_then(move |json: json::Root| {
             let config = config;
             match config.validation_strategy {
-                import::config::ValidationStrategy::Skip => {
+                config::ValidationStrategy::Skip => {
                     future::ok(Root::new(json))
                 },
-                import::config::ValidationStrategy::Minimal => {
+                config::ValidationStrategy::Minimal => {
                     let mut errs = vec![];
                     json.validate_minimally(
                         &json,
@@ -202,10 +205,10 @@ pub fn import<S: import::Source>(
                     if errs.is_empty() {
                         future::ok(Root::new(json))
                     } else {
-                        future::err(import::Error::Validation(errs))
+                        future::err(Error::Validation(errs))
                     }
                 },
-                import::config::ValidationStrategy::Complete => {
+                config::ValidationStrategy::Complete => {
                     let mut errs = vec![];
                     json.validate_completely(
                         &json,
@@ -215,7 +218,7 @@ pub fn import<S: import::Source>(
                     if errs.is_empty() {
                         future::ok(Root::new(json))
                     } else {
-                        future::err(import::Error::Validation(errs))
+                        future::err(Error::Validation(errs))
                     }
                 },
             }
@@ -234,8 +237,9 @@ pub fn import<S: import::Source>(
             let decoded_images = decode_images(&buffers, images)?;
             Ok((root, buffers, decoded_images))
         })
-        .and_then(|(root, buffers, images)| {
-            Ok(Gltf::new(root, buffers, images))
+        .and_then(|(root, _buffers, _images)| {
+            // TODO: Do something with the data!
+            Ok(Gltf::new(root))
         });
     Box::new(task)
 }

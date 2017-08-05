@@ -8,17 +8,17 @@
 // except according to those terms.
 
 use futures::{self, future};
-use import::{self, config, data};
 use json::{self, validation};
+use {config, data};
 
 use futures::{Future, Poll};
-use image_crate::{load_from_memory, load_from_memory_with_format};
-use image_crate::ImageFormat as Format;
-use image_crate::ImageFormat::{JPEG as Jpeg, PNG as Png};
-use image_crate::ImageResult;
-use import::{Config, Source};
-use root::Root;
-use {Data, DynamicImage, Gltf};
+use image::{load_from_memory, load_from_memory_with_format};
+use image::ImageFormat as Format;
+use image::ImageFormat::{JPEG as Jpeg, PNG as Png};
+use image::ImageResult;
+use gltf::root::Root;
+use gltf::Gltf;
+use {Config, Data, DynamicImage, Error, Source};
 
 /// The contents of a .glb file.
 #[derive(Clone, Debug)]
@@ -61,7 +61,7 @@ struct Slice {
     length: usize,
 }
 
-enum AsyncImage<S: import::Source> {
+enum AsyncImage<S: Source> {
     /// Image data is borrowed from a buffer.
     Borrowed {
         /// The buffer index.
@@ -87,9 +87,9 @@ enum AsyncImage<S: import::Source> {
     },
 }
 
-impl<S: import::Source> Future for AsyncImage<S> {
+impl<S: Source> Future for AsyncImage<S> {
     type Item = EncodedImage;
-    type Error = import::Error<S>;
+    type Error = Error<S>;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self {
             &mut AsyncImage::Borrowed { index, offset, len, format } => {
@@ -158,9 +158,9 @@ impl Glb {
     /// * Mandatory GLB header.
     /// * Mandatory JSON chunk.
     /// * Optional BIN chunk.
-    fn split<S: import::Source>(&self) -> Result<Split, import::Error<S>> {
+    fn split<S: Source>(&self) -> Result<Split, Error<S>> {
         use std::mem::{size_of, transmute};
-        let err = |reason: &str| Err(import::Error::MalformedGlb(reason.to_string()));
+        let err = |reason: &str| Err(Error::MalformedGlb(reason.to_string()));
         let glb = &self.0;
         let glb_ptr = glb.as_ptr();
         if glb.len() < size_of::<Header>() + size_of::<ChunkInfo>() {
@@ -224,7 +224,7 @@ impl Glb {
     }
 }
 
-fn source_buffers<S: import::Source>(
+fn source_buffers<S: Source>(
     root: &Root,
     source: &S,
     blob: Option<Box<[u8]>>,
@@ -246,7 +246,7 @@ fn source_buffers<S: import::Source>(
     buffers
 }
 
-fn source_images<S: import::Source>(
+fn source_images<S: Source>(
     root: &Root,
     source: &S,
 ) -> Vec<AsyncImage<S>> {
@@ -306,7 +306,7 @@ fn validate<S: Source>(
     json: json::Root,
     strategy: config::ValidationStrategy, 
     has_blob: bool,
-) -> Box<Future<Item = Root, Error = import::Error<S>>> {
+) -> Box<Future<Item = Root, Error = Error<S>>> {
     use self::validation::{Error as Reason, Validate};
     Box::new(future::lazy(move || {
         let mut errs = vec![];
@@ -356,17 +356,17 @@ fn validate<S: Source>(
         if errs.is_empty() {
             Ok(Root::new(json))
         } else {
-            Err(import::Error::Validation(errs))
+            Err(Error::Validation(errs))
         }
     }))
 }
 
 /// Imports some glTF from the given data source.
-pub fn import<S: import::Source>(
+pub fn import<S: Source>(
     data: Box<[u8]>,
     source: S,
     config: Config,
-) -> Box<Future<Item = Gltf, Error = import::Error<S>>> {
+) -> Box<Future<Item = Gltf, Error = Error<S>>> {
     Box::new(future::lazy(move || {
         let glb = Glb(data);
         let (_, json_chunk, blob_chunk) = glb.split()?;
@@ -398,8 +398,9 @@ pub fn import<S: import::Source>(
             let decoded_images = decode_images(&buffers, images)?;
             Ok((root, buffers, decoded_images))
         })
-        .and_then(|(root, buffers, images)| {
-            Ok(Gltf::new(root, buffers, images))
+        .and_then(|(root, _buffers, _images)| {
+                 // TODO: Do something with the data!
+            Ok(Gltf::new(root))
         }))
 }
 

@@ -7,7 +7,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use import;
 use json;
 use root;
 use std::{fmt, iter, ops, slice};
@@ -25,12 +24,6 @@ use texture::{Sampler, Texture};
 
 /// A loaded glTF complete with its data.
 pub struct Gltf {
-    /// The glTF buffer data.
-    buffer_data: Vec<import::Data>,
-
-    /// The glTF image data.
-    image_data: Vec<import::DynamicImage>,
-
     /// The root glTF struct (and also `Deref` target).
     root: root::Root,
 }
@@ -166,35 +159,11 @@ pub struct Textures<'a> {
 }
 
 impl Gltf {
-    /// Constructor for a complete lazy-loaded glTF asset.
-    pub fn new(
-        root: root::Root,
-        buffer_data: Vec<import::Data>,
-        image_data: Vec<import::DynamicImage>,
-    ) -> Self {
+    /// Constructor for the `Gltf` wrapper.
+    pub fn new(root: root::Root) -> Self {
         Self {
-            buffer_data: buffer_data,
-            image_data: image_data,
-            root: root,
+            root,
         }
-    }
-
-    /// Returns preloaded buffer data.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the index is out of range.
-    pub fn buffer_data(&self, index: usize) -> import::Data {
-        self.buffer_data[index].clone()
-    }
-
-    /// Returns preloaded image data. 
-    ///
-    /// # Panics
-    ///
-    /// Panics if the index is out of range.
-    pub fn image_data<'a>(&'a self, index: usize) -> &'a import::DynamicImage {
-        &self.image_data[index]
     }
 
     /// Returns an `Iterator` that visits the accessors of the glTF asset.

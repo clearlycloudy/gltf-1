@@ -33,7 +33,7 @@
 //! The crate provides a `from_path` method whereby one can import glTF from the
 //! system.
 //!
-//! ```
+//! ```no-run
 //! extern crate gltf;
 //!
 //! fn main() {
@@ -65,7 +65,7 @@
 //!
 //! [`Node`]: scene/struct.Node.html
 //! [`Scene`]: scene/struct.Scene.html
-//! ```
+//! ```no-run
 //! # fn run() -> Result<(), Box<std::error::Error>> {
 //! # let path = "./glTF-Sample-Models/2.0/Box/glTF/Box.gltf";
 //! let gltf = gltf::Import::from_path(path).sync()?;
@@ -86,9 +86,6 @@
 //! # }
 //! ```
 
-extern crate base64;
-extern crate futures;
-extern crate image as image_crate;
 #[macro_use]
 extern crate lazy_static;
 
@@ -116,9 +113,6 @@ pub mod gltf;
 /// Contains `Image` and other related data structures.
 pub mod image;
 
-/// Contains functions for importing glTF 2.0 assets.
-pub mod import;
-
 /// Contains `Material` and other related data structures.
 pub mod material;
 
@@ -138,4 +132,3 @@ pub mod skin;
 pub mod texture;
 
 pub use self::gltf::Gltf;
-pub use self::import::{Data, DynamicImage, Import};

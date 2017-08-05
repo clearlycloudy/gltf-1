@@ -17,11 +17,16 @@
 //! base64 encoded data. This implementation may be used as reference for other
 //! schemes such as `http`.
 
-use futures::future;
-use json::{self, validation};
-use std::{self, fmt};
+extern crate base64;
+extern crate futures;
+extern crate gltf;
+extern crate image;
 
-use image_crate::ImageError;
+use futures::future;
+use gltf::json::{self, validation};
+use std::fmt;
+
+use image::ImageError;
 use futures::{Future, Poll};
 use gltf::Gltf;
 use std::boxed::Box;

@@ -9,7 +9,6 @@
 
 use base64;
 use futures::future;
-use import;
 use std::{self, fmt};
 
 use futures::{BoxFuture, Future};
@@ -17,6 +16,8 @@ use std::boxed::Box;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
+
+use Source;
 
 /// Data source error.
 #[derive(Debug)]
@@ -65,7 +66,7 @@ fn decode_base64(stream: Vec<u8>) -> Box<Future<Item = Box<[u8]>, Error = Error>
     }))
 }
 
-impl import::Source for FromPath {
+impl Source for FromPath {
     type Error = Error;
     
     fn source_gltf(&self) -> Box<Future<Item = Box<[u8]>, Error = Self::Error>> {

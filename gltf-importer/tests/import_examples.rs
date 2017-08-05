@@ -9,7 +9,7 @@
 
 extern crate futures;
 extern crate futures_cpupool;
-extern crate gltf;
+extern crate gltf_importer;
 
 use futures::future;
 use std::{fs, io, path};
@@ -17,12 +17,12 @@ use std::{fs, io, path};
 use futures::{BoxFuture, Future};
 use futures_cpupool::CpuPool;
 
-type ImportError = gltf::import::Error<gltf::import::FromPath>;
+type ImportError = gltf_importer::Error<gltf_importer::FromPath>;
 
 fn import_from_path(path: path::PathBuf) -> BoxFuture<(), ImportError> {
     future::lazy(move || {
         let path = path;
-        match gltf::Import::from_path(&path).sync() {
+        match gltf_importer::Import::from_path(&path).sync() {
             Ok(_) => {
                 println!("{:?}: Ok", path);
                 Ok(())

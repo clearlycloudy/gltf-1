@@ -8,7 +8,7 @@
 // except according to those terms.
 
 use std::{marker, mem};
-use {buffer, extensions, import, json};
+use {buffer, extensions, json};
 
 use Gltf;
 
@@ -26,6 +26,9 @@ pub struct Accessor<'a> {
 
     /// The corresponding JSON struct.
     json: &'a json::accessor::Accessor,
+
+    /// The buffer view this accessor reads from.
+    view: buffer::View<'a>,
 }
 
 /// An `Iterator` that iterates over the members of an accessor.
@@ -40,20 +43,23 @@ pub struct Iter<T> {
     /// The number of bytes to advance `ptr` by per iteration.
     stride: usize,
 
-    /// The buffer view data we're iterating over.
-    data: import::Data,
-
     /// Consumes the data type we're returning at each iteration.
     _mk: marker::PhantomData<T>,
 }
 
 impl<'a> Accessor<'a> {
     /// Constructs an `Accessor`.
-    pub fn new(gltf: &'a Gltf, index: usize, json: &'a json::accessor::Accessor) -> Self {
+    pub fn new(
+        gltf: &'a Gltf,
+        index: usize,
+        json: &'a json::accessor::Accessor,
+    ) -> Self {
+        let view = gltf.views().nth(json.buffer_view.value()).unwrap();
         Self {
-            gltf: gltf,
-            index: index,
-            json: json,
+            gltf,
+            index,
+            json,
+            view,
         }
     }
 
@@ -80,14 +86,13 @@ impl<'a> Accessor<'a> {
     pub unsafe fn iter<T>(&self) -> Iter<T> {
         let count = self.count();
         let offset = self.offset() as isize;
-        let stride = self.view().stride().unwrap_or(mem::size_of::<T>());
-        let data = self.view().data();
+        let stride = self.view.stride().unwrap_or(mem::size_of::<T>());
+        let data = self.view.data();
         let ptr = data.as_ptr().offset(offset);
         Iter {
             count: count,
             ptr: ptr,
             stride: stride,
-            data: data,
             _mk: marker::PhantomData,
         }
     }

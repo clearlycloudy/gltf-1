@@ -1,0 +1,20 @@
+[package]
+name = "gltf-importer"
+version = "0.1.0"
+authors = ["alteous <alteous@outlook.com>"]
+description = "An importer for the gltf crate"
+repository = "https://github.com/alteous/gltf"
+license = "MIT/Apache-2.0"
+
+[dev-dependencies]
+futures-cpupool = "0.1"
+
+[dependencies]
+base64 = "0.6"
+futures = "0.1"
+gltf = { path = "../" }# "0.1"
+image = "0.14"
+
+[[example]]
+name = "gltf-display"
+path = "examples/display/main.rs"
